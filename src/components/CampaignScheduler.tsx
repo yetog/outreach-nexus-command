@@ -22,10 +22,16 @@ interface Campaign {
 
 export const CampaignScheduler = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [newCampaign, setNewCampaign] = useState({
+  const [newCampaign, setNewCampaign] = useState<{
+    name: string;
+    template: string;
+    scheduleType: 'immediate' | 'scheduled' | 'drip';
+    scheduledDate: string;
+    dailyLimit: number;
+  }>({
     name: '',
     template: '',
-    scheduleType: 'immediate' as const,
+    scheduleType: 'immediate',
     scheduledDate: '',
     dailyLimit: 50
   });
@@ -104,7 +110,7 @@ export const CampaignScheduler = () => {
             
             <div>
               <label className="block text-sm font-medium mb-2">Schedule Type</label>
-              <Select value={newCampaign.scheduleType} onValueChange={(value: any) => setNewCampaign({...newCampaign, scheduleType: value})}>
+              <Select value={newCampaign.scheduleType} onValueChange={(value: 'immediate' | 'scheduled' | 'drip') => setNewCampaign({...newCampaign, scheduleType: value})}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
