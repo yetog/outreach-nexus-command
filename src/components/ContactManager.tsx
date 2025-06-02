@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Search, Plus, Filter } from 'lucide-react';
+import { Upload, Search, Plus, Filter, Users } from 'lucide-react';
 
 interface Contact {
   id: string;

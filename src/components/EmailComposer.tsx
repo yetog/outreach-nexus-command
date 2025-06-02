@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Save, Send, Eye, Plus } from 'lucide-react';
+import { Save, Send, Eye, Plus, Mail } from 'lucide-react';
 
 interface EmailTemplate {
   id: string;
@@ -90,7 +90,7 @@ export const EmailComposer = () => {
               </div>
               
               <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
-                <strong>Available variables:</strong> {{name}}, {{email}}, {{company}}, {{tag1}}, {{tag2}}
+                <strong>Available variables:</strong> &#123;&#123;name&#125;&#125;, &#123;&#123;email&#125;&#125;, &#123;&#123;company&#125;&#125;, &#123;&#123;tag1&#125;&#125;, &#123;&#123;tag2&#125;&#125;
               </div>
               
               <div className="flex gap-2">
