@@ -10,6 +10,10 @@ import { DealsManager } from './DealsManager';
 import { GamificationCard } from './GamificationCard';
 import { KnowledgeManager } from './KnowledgeManager';
 import { ChatBot } from './ChatBot';
+import { CallNotes } from './CallNotes';
+import { QuoteGenerator } from './QuoteGenerator';
+import { PitchLibrary } from './PitchLibrary';
+import { SettingsDialog } from './SettingsDialog';
 import { Users, Mail, Calendar, BarChart3, Target } from 'lucide-react';
 
 export const Dashboard = () => {
@@ -19,10 +23,13 @@ export const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Outreach Nexus</h1>
-          <p className="text-muted-foreground mt-2">Your complete sales automation and gamification hub</p>
-        </div>
+<div className="mb-8 flex items-start justify-between gap-4">
+  <div>
+    <h1 className="text-3xl font-bold text-foreground">Outreach Nexus</h1>
+    <p className="text-muted-foreground mt-2">Your complete sales automation and gamification hub</p>
+  </div>
+  <SettingsDialog />
+</div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -103,10 +110,13 @@ export const Dashboard = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="deals">Deals Pipeline</TabsTrigger>
             <TabsTrigger value="contacts">Contacts</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
+            <TabsTrigger value="call-notes">Call Notes</TabsTrigger>
+            <TabsTrigger value="quotes">Quotes</TabsTrigger>
+            <TabsTrigger value="pitches">Pitch Library</TabsTrigger>
             <TabsTrigger value="composer">Composer</TabsTrigger>
             <TabsTrigger value="scheduler">Campaigns</TabsTrigger>
             <TabsTrigger value="tracker">Analytics</TabsTrigger>
@@ -122,6 +132,18 @@ export const Dashboard = () => {
           
           <TabsContent value="knowledge">
             <KnowledgeManager />
+          </TabsContent>
+          
+          <TabsContent value="call-notes">
+            <CallNotes />
+          </TabsContent>
+
+          <TabsContent value="quotes">
+            <QuoteGenerator />
+          </TabsContent>
+
+          <TabsContent value="pitches">
+            <PitchLibrary />
           </TabsContent>
           
           <TabsContent value="composer">
