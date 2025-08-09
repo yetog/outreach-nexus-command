@@ -8,10 +8,13 @@ import { CampaignScheduler } from './CampaignScheduler';
 import { StatusTracker } from './StatusTracker';
 import { DealsManager } from './DealsManager';
 import { GamificationCard } from './GamificationCard';
+import { KnowledgeManager } from './KnowledgeManager';
+import { ChatBot } from './ChatBot';
 import { Users, Mail, Calendar, BarChart3, Target } from 'lucide-react';
 
 export const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('deals');
+  const [isChatBotOpen, setIsChatBotOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -100,9 +103,10 @@ export const Dashboard = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="deals">Deals Pipeline</TabsTrigger>
             <TabsTrigger value="contacts">Contacts</TabsTrigger>
+            <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="composer">Composer</TabsTrigger>
             <TabsTrigger value="scheduler">Campaigns</TabsTrigger>
             <TabsTrigger value="tracker">Analytics</TabsTrigger>
@@ -114,6 +118,10 @@ export const Dashboard = () => {
           
           <TabsContent value="contacts">
             <ContactManager />
+          </TabsContent>
+          
+          <TabsContent value="knowledge">
+            <KnowledgeManager />
           </TabsContent>
           
           <TabsContent value="composer">
@@ -129,6 +137,12 @@ export const Dashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Floating ChatBot */}
+      <ChatBot 
+        isOpen={isChatBotOpen} 
+        onToggle={() => setIsChatBotOpen(!isChatBotOpen)} 
+      />
     </div>
   );
 };
