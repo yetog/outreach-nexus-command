@@ -6,57 +6,48 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-
-import { Calendar, Phone, Mail, Plus } from "lucide-react";
-
-export type TaskType = "call" | "meeting" | "email";
-
-interface TaskItem {
-  id: string;
-  type: TaskType;
-  title: string;
-  due?: string; // e.g., "10:30 AM"
-  done: boolean;
-}
-
-const STORAGE_KEY = "onx.tasks.today";
+import { Calendar, Phone, Mail, Plus, Clock, AlertCircle } from "lucide-react";
+import { taskStorage, Task, TaskType } from "@/lib/taskStorage";
+import { format } from "date-fns";
 
 const typeMeta: Record<TaskType, { label: string; icon: React.ReactNode; badge: string }> = {
   call: { label: "Call", icon: <Phone className="h-4 w-4" />, badge: "bg-primary/10 text-primary" },
   meeting: { label: "Meeting", icon: <Calendar className="h-4 w-4" />, badge: "bg-info/10 text-info" },
   email: { label: "Email", icon: <Mail className="h-4 w-4" />, badge: "bg-warning/10 text-warning" },
+  "follow-up": { label: "Follow-up", icon: <Clock className="h-4 w-4" />, badge: "bg-success/10 text-success" },
 };
 
 export function Today() {
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [newType, setNewType] = useState<TaskType>("call");
   const [newTitle, setNewTitle] = useState("");
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setTasks(JSON.parse(saved));
-    } catch {}
-  }, []);
+  const loadTasks = () => {
+    const today = taskStorage.getToday();
+    const overdue = taskStorage.getOverdue();
+    setTasks([...overdue, ...today]);
+  };
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  }, [tasks]);
+    loadTasks();
+  }, []);
 
   const addTask = () => {
     if (!newTitle.trim()) return;
-    const t: TaskItem = {
-      id: crypto.randomUUID(),
-      type: newType,
+    taskStorage.create({
       title: newTitle.trim(),
-      done: false,
-    };
-    setTasks((prev) => [t, ...prev]);
+      type: newType,
+      priority: "medium",
+      dueDate: format(new Date(), 'yyyy-MM-dd'),
+      completed: false,
+    });
     setNewTitle("");
+    loadTasks();
   };
 
   const toggleDone = (id: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+    taskStorage.toggleComplete(id);
+    loadTasks();
   };
 
   const byType = useMemo(() => {
@@ -65,15 +56,35 @@ export function Today() {
       call: tasks.filter((t) => t.type === "call"),
       meeting: tasks.filter((t) => t.type === "meeting"),
       email: tasks.filter((t) => t.type === "email"),
+      "follow-up": tasks.filter((t) => t.type === "follow-up"),
     };
   }, [tasks]);
 
+  const overdueTasks = useMemo(() => tasks.filter(t => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return !t.completed && t.dueDate < today;
+  }), [tasks]);
+
   return (
     <div className="space-y-4">
+      {overdueTasks.length > 0 && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-4 w-4" />
+              {overdueTasks.length} Overdue Task{overdueTasks.length !== 1 && 's'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TaskList items={overdueTasks} onToggle={toggleDone} compact />
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Today</CardTitle>
-          <CardDescription>Capture the 3-7 most important actions for today.</CardDescription>
+          <CardTitle>Add Task</CardTitle>
+          <CardDescription>Capture the most important actions for today.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-3">
@@ -85,6 +96,7 @@ export function Today() {
                 <SelectItem value="call">Call</SelectItem>
                 <SelectItem value="meeting">Meeting</SelectItem>
                 <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="follow-up">Follow-up</SelectItem>
               </SelectContent>
             </Select>
             <Input
@@ -104,14 +116,15 @@ export function Today() {
       </Card>
 
       <Tabs defaultValue="all" className="space-y-2">
-        <TabsList className="grid grid-cols-4 w-full">
+        <TabsList className="grid grid-cols-5 w-full">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="call">Calls</TabsTrigger>
           <TabsTrigger value="meeting">Meetings</TabsTrigger>
           <TabsTrigger value="email">Emails</TabsTrigger>
+          <TabsTrigger value="follow-up">Follow-up</TabsTrigger>
         </TabsList>
 
-        {(["all", "call", "meeting", "email"] as const).map((key) => (
+        {(["all", "call", "meeting", "email", "follow-up"] as const).map((key) => (
           <TabsContent key={key} value={key}>
             <TaskList items={byType[key as keyof typeof byType]} onToggle={toggleDone} />
           </TabsContent>
@@ -121,7 +134,7 @@ export function Today() {
   );
 }
 
-function TaskList({ items, onToggle }: { items: TaskItem[]; onToggle: (id: string) => void }) {
+function TaskList({ items, onToggle, compact }: { items: Task[]; onToggle: (id: string) => void; compact?: boolean }) {
   if (!items.length)
     return (
       <Card>
@@ -130,14 +143,22 @@ function TaskList({ items, onToggle }: { items: TaskItem[]; onToggle: (id: strin
     );
 
   return (
-    <div className="space-y-2">
+    <div className={compact ? "space-y-1" : "space-y-2"}>
       {items.map((t) => (
         <Card key={t.id} className="border-muted/50">
-          <CardContent className="py-3">
+          <CardContent className={compact ? "py-2" : "py-3"}>
             <div className="flex items-center gap-3">
-              <Checkbox checked={t.done} onCheckedChange={() => onToggle(t.id)} />
+              <Checkbox checked={t.completed} onCheckedChange={() => onToggle(t.id)} />
               <Badge className={`${typeMeta[t.type].badge}`}>{typeMeta[t.type].label}</Badge>
-              <div className={`flex-1 ${t.done ? "line-through text-muted-foreground" : ""}`}>{t.title}</div>
+              <div className={`flex-1 ${t.completed ? "line-through text-muted-foreground" : ""}`}>
+                {t.title}
+              </div>
+              {t.dueTime && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {t.dueTime}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>

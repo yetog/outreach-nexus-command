@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Home, Users, DollarSign, Send, FileText, BarChart3, Settings as SettingsIcon } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -13,6 +13,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { MiniCalendar } from './MiniCalendar';
 
 const outreachItems = [
   { title: 'Today', url: '/', icon: Home },
@@ -31,10 +32,16 @@ const crmItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
+        {!isCollapsed && (
+          <div className="px-3 py-2">
+            <MiniCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+          </div>
+        )}
         <SidebarGroup>
           <SidebarGroupLabel>Outreach</SidebarGroupLabel>
           <SidebarGroupContent>
