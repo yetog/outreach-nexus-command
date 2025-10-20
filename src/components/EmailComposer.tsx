@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Save, Send, Eye, Plus, Mail } from 'lucide-react';
+import { Save, Send, Eye, Plus, Mail, Wand2, Loader2 } from 'lucide-react';
+import { ionosAI } from '@/lib/ionosAI';
+import { useToast } from '@/hooks/use-toast';
 
 interface EmailTemplate {
   id: string;
@@ -17,6 +19,7 @@ interface EmailTemplate {
 }
 
 export const EmailComposer = () => {
+  const { toast } = useToast();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [currentTemplate, setCurrentTemplate] = useState<Partial<EmailTemplate>>({
     name: '',
@@ -25,6 +28,8 @@ export const EmailComposer = () => {
     tags: []
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiContext, setAiContext] = useState({ recipientName: '', company: '', goal: '' });
 
   const handleSaveTemplate = () => {
     if (currentTemplate.name && currentTemplate.subject && currentTemplate.body) {
@@ -48,6 +53,33 @@ export const EmailComposer = () => {
     setIsEditing(true);
   };
 
+  const handleGenerateAI = async () => {
+    if (!aiContext.goal.trim()) {
+      toast({ title: 'Missing goal', description: 'Please specify the email goal.', variant: 'destructive' });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await ionosAI.generateEmailCTA(aiContext);
+      setCurrentTemplate({
+        ...currentTemplate,
+        subject: result.subject,
+        body: result.body,
+      });
+      toast({ title: 'AI Email generated', description: 'Email created with IONOS AI.' });
+    } catch (error) {
+      console.error('Generate error:', error);
+      toast({ 
+        title: 'Generation failed', 
+        description: 'Could not generate AI email. Please try again.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -61,6 +93,41 @@ export const EmailComposer = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* AI Generator Section */}
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg space-y-3">
+                <h4 className="font-semibold text-sm flex items-center">
+                  <Wand2 className="h-4 w-4 mr-2" /> AI Email Generator
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    placeholder="Recipient name"
+                    value={aiContext.recipientName}
+                    onChange={(e) => setAiContext({...aiContext, recipientName: e.target.value})}
+                  />
+                  <Input
+                    placeholder="Company"
+                    value={aiContext.company}
+                    onChange={(e) => setAiContext({...aiContext, company: e.target.value})}
+                  />
+                </div>
+                <Input
+                  placeholder="Email goal (e.g., book a demo, discuss partnership)"
+                  value={aiContext.goal}
+                  onChange={(e) => setAiContext({...aiContext, goal: e.target.value})}
+                />
+                <Button onClick={handleGenerateAI} disabled={isGenerating} size="sm" className="w-full">
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="h-4 w-4 mr-2" /> Generate with AI
+                    </>
+                  )}
+                </Button>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium mb-2">Template Name</label>
                 <Input
