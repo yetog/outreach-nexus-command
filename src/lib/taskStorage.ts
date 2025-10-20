@@ -1,4 +1,5 @@
 import { format, parseISO, isToday, isPast, isFuture } from 'date-fns';
+import { gamificationStorage } from './gamificationStorage';
 
 export type TaskType = 'call' | 'meeting' | 'email' | 'follow-up';
 export type TaskPriority = 'low' | 'medium' | 'high';
@@ -88,7 +89,28 @@ export const taskStorage = {
   toggleComplete(id: string): Task | null {
     const task = this.getAll().find(t => t.id === id);
     if (!task) return null;
-    return this.update(id, { completed: !task.completed });
+    
+    const updated = this.update(id, { completed: !task.completed });
+    
+    // Award XP for completing tasks
+    if (updated && updated.completed) {
+      gamificationStorage.addEvent('task_complete', `Completed: ${updated.title}`);
+      gamificationStorage.updateStats('tasksCompleted');
+      
+      // Update daily quests
+      const quests = gamificationStorage.getQuests();
+      const dailyTaskQuest = quests.find(q => q.type === 'daily' && q.title === 'Daily Hustler');
+      if (dailyTaskQuest) {
+        gamificationStorage.updateQuest(dailyTaskQuest.id, dailyTaskQuest.current + 1);
+      }
+      
+      const weeklyTaskQuest = quests.find(q => q.type === 'weekly' && q.title === 'Weekly Warrior');
+      if (weeklyTaskQuest) {
+        gamificationStorage.updateQuest(weeklyTaskQuest.id, weeklyTaskQuest.current + 1);
+      }
+    }
+    
+    return updated;
   },
 
   getTasksForMonth(year: number, month: number): Map<number, number> {

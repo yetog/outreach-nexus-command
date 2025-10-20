@@ -1,3 +1,5 @@
+import { gamificationStorage } from './gamificationStorage';
+
 export interface Contact {
   id: string;
   name: string;
@@ -59,6 +61,11 @@ export const contactStorage = {
     const contacts = this.getAll();
     contacts.push(newContact);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(contacts));
+    
+    // Award XP for adding contact
+    gamificationStorage.addEvent('contact_added', `Added: ${newContact.name}`);
+    gamificationStorage.updateStats('contactsAdded');
+    
     return newContact;
   },
 
