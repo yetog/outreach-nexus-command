@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Mail, Phone, Building, Linkedin, MapPin, Tag, Trash2 } from 'lucide-react';
+import { Plus, Search, LayoutGrid, Table as TableIcon, Users } from 'lucide-react';
 import { contactStorage, Contact } from '@/lib/contactStorage';
-import { LinkedInImport } from './LinkedInImport';
+import { QuickImport } from './QuickImport';
+import { ContactDetail } from './ContactDetail';
+import { ContactTable } from './ContactTable';
 import {
   Dialog,
   DialogContent,
@@ -17,11 +19,19 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Mail, Phone, Building, Linkedin, MapPin, Tag, Trash2 } from 'lucide-react';
+
+type ViewMode = 'cards' | 'table';
 
 export function ContactManager() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [newContact, setNewContact] = useState({
     name: '',
     email: '',
@@ -67,9 +77,22 @@ export function ContactManager() {
     loadContacts();
   };
 
-  const filteredContacts = searchQuery
+  const handleContactClick = (contact: Contact) => {
+    setSelectedContactId(contact.id);
+    setIsDetailOpen(true);
+  };
+
+  // Get unique tags for filtering
+  const allTags = Array.from(new Set(contacts.flatMap(c => c.tags)));
+
+  // Filter contacts
+  let filteredContacts = searchQuery
     ? contactStorage.search(searchQuery)
     : contacts;
+
+  if (activeTagFilter) {
+    filteredContacts = filteredContacts.filter(c => c.tags.includes(activeTagFilter));
+  }
 
   const enrichmentColors = {
     pending: 'bg-warning/10 text-warning',
@@ -134,6 +157,15 @@ export function ContactManager() {
                 />
               </div>
               <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={newContact.phone}
+                  onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                  placeholder="+1 555-0123"
+                />
+              </div>
+              <div>
                 <Label htmlFor="linkedin">LinkedIn URL</Label>
                 <Input
                   id="linkedin"
@@ -160,35 +192,94 @@ export function ContactManager() {
         </Dialog>
       </div>
 
-      <LinkedInImport onImportComplete={loadContacts} />
+      {/* Quick Import Zone */}
+      {contacts.length === 0 ? (
+        <QuickImport onImportComplete={loadContacts} className="py-12" />
+      ) : (
+        <QuickImport onImportComplete={loadContacts} />
+      )}
+
+      {/* Tag Filters */}
+      {allTags.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-muted-foreground">Filter:</span>
+          <Badge
+            variant={activeTagFilter === null ? 'default' : 'outline'}
+            className="cursor-pointer"
+            onClick={() => setActiveTagFilter(null)}
+          >
+            All
+          </Badge>
+          {allTags.map((tag) => (
+            <Badge
+              key={tag}
+              variant={activeTagFilter === tag ? 'default' : 'outline'}
+              className="cursor-pointer"
+              onClick={() => setActiveTagFilter(tag === activeTagFilter ? null : tag)}
+            >
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>All Contacts</CardTitle>
-              <CardDescription>Search and manage your contacts</CardDescription>
+              <CardDescription>
+                {filteredContacts.length === contacts.length
+                  ? 'Search and manage your contacts'
+                  : `Showing ${filteredContacts.length} of ${contacts.length} contacts`}
+              </CardDescription>
             </div>
-            <div className="relative w-72">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+            <div className="flex items-center gap-4">
+              <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as ViewMode)}>
+                <ToggleGroupItem value="cards" aria-label="Card view">
+                  <LayoutGrid className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="table" aria-label="Table view">
+                  <TableIcon className="h-4 w-4" />
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <div className="relative w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search contacts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {filteredContacts.length === 0 ? (
+          {viewMode === 'table' ? (
+            <ContactTable
+              contacts={filteredContacts}
+              onContactClick={handleContactClick}
+              onDeleteContact={handleDeleteContact}
+            />
+          ) : filteredContacts.length === 0 ? (
             <div className="text-center py-12">
+              <Users className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">No contacts found</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {contacts.length === 0 
+                  ? 'Import a CSV or add contacts manually to get started'
+                  : 'Try adjusting your search or filter'}
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
               {filteredContacts.map((contact) => (
-                <Card key={contact.id} className="border-muted/50">
+                <Card 
+                  key={contact.id} 
+                  className="border-muted/50 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => handleContactClick(contact)}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="h-12 w-12">
@@ -212,7 +303,10 @@ export function ContactManager() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => handleDeleteContact(contact.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteContact(contact.id);
+                              }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -253,6 +347,7 @@ export function ContactManager() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-info hover:underline"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 View Profile
                               </a>
@@ -284,6 +379,13 @@ export function ContactManager() {
           )}
         </CardContent>
       </Card>
+
+      <ContactDetail
+        contactId={selectedContactId}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+        onUpdate={loadContacts}
+      />
     </div>
   );
 }

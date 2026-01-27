@@ -107,6 +107,14 @@ export function seedDemoData(): void {
 
 export function resetDemoData(): void {
   // Clear all storage
+  clearAllData();
+  
+  // Re-seed
+  seedDemoData();
+}
+
+export function clearAllData(): void {
+  // Clear all storage without re-seeding
   contactStorage.clear();
   taskStorage.clear();
   dealStorage.clear();
@@ -116,13 +124,30 @@ export function resetDemoData(): void {
   knowledgeStorage.clearAll();
   gamificationStorage.clear();
   
+  // Also clear call logs
+  localStorage.removeItem('onx.call_logs');
+  
   // Remove seeded flag
   localStorage.removeItem(DEMO_SEEDED_KEY);
-  
-  // Re-seed
-  seedDemoData();
+}
+
+export function hasAnyData(): boolean {
+  return contactStorage.getAll().length > 0 ||
+    dealStorage.getAll().length > 0 ||
+    taskStorage.getAll().length > 0;
 }
 
 export function isDemoSeeded(): boolean {
   return localStorage.getItem(DEMO_SEEDED_KEY) === 'true';
+}
+
+export function isFirstTimeUser(): boolean {
+  // Check if any onx.* keys exist in localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('onx.')) {
+      return false;
+    }
+  }
+  return true;
 }

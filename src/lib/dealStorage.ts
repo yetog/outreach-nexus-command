@@ -2,6 +2,7 @@ import { gamificationStorage } from './gamificationStorage';
 
 export interface Deal {
   id: string;
+  contactId?: string;
   contactName: string;
   company: string;
   stage: 'discovery' | 'proposal' | 'negotiation' | 'closing' | 'won' | 'lost';
