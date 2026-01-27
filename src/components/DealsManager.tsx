@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,18 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, DollarSign, Calendar, User, Building, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface Deal {
-  id: string;
-  contactName: string;
-  company: string;
-  stage: 'discovery' | 'proposal' | 'negotiation' | 'closing' | 'won' | 'lost';
-  value: number;
-  priority: 'low' | 'medium' | 'high';
-  nextStep: string;
-  lastActivity: string;
-  createdAt: string;
-}
+import { dealStorage, Deal } from '@/lib/dealStorage';
 
 const DEAL_STAGES = [
   { value: 'discovery', label: 'Discovery', color: 'bg-info' },
@@ -40,31 +29,7 @@ const PRIORITY_COLORS = {
 
 export const DealsManager = () => {
   const { toast } = useToast();
-  const [deals, setDeals] = useState<Deal[]>([
-    {
-      id: '1',
-      contactName: 'John Smith',
-      company: 'Acme Corp',
-      stage: 'proposal',
-      value: 25000,
-      priority: 'high',
-      nextStep: 'Follow up on proposal feedback',
-      lastActivity: '2 days ago',
-      createdAt: '2024-01-15',
-    },
-    {
-      id: '2',
-      contactName: 'Sarah Johnson',
-      company: 'TechStart Inc',
-      stage: 'discovery',
-      value: 15000,
-      priority: 'medium',
-      nextStep: 'Schedule demo call',
-      lastActivity: '1 day ago',
-      createdAt: '2024-01-18',
-    },
-  ]);
-
+  const [deals, setDeals] = useState<Deal[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newDeal, setNewDeal] = useState<{
     contactName: string;
@@ -82,6 +47,10 @@ export const DealsManager = () => {
     nextStep: '',
   });
 
+  useEffect(() => {
+    setDeals(dealStorage.getAll());
+  }, []);
+
   const handleCreateDeal = () => {
     if (!newDeal.contactName || !newDeal.company || !newDeal.value) {
       toast({
@@ -92,19 +61,16 @@ export const DealsManager = () => {
       return;
     }
 
-    const deal: Deal = {
-      id: Date.now().toString(),
+    const deal = dealStorage.create({
       contactName: newDeal.contactName,
       company: newDeal.company,
       stage: newDeal.stage,
       value: parseFloat(newDeal.value),
       priority: newDeal.priority,
       nextStep: newDeal.nextStep,
-      lastActivity: 'Just now',
-      createdAt: new Date().toISOString().split('T')[0],
-    };
+    });
 
-    setDeals([...deals, deal]);
+    setDeals(dealStorage.getAll());
     setNewDeal({
       contactName: '',
       company: '',
@@ -117,16 +83,13 @@ export const DealsManager = () => {
 
     toast({
       title: "Deal Created",
-      description: `New deal for ${deal.company} created successfully.`,
+      description: `New deal for ${deal.company} created successfully. +25 XP`,
     });
   };
 
   const handleStageChange = (dealId: string, newStage: Deal['stage']) => {
-    setDeals(deals.map(deal => 
-      deal.id === dealId 
-        ? { ...deal, stage: newStage, lastActivity: 'Just now' }
-        : deal
-    ));
+    dealStorage.update(dealId, { stage: newStage });
+    setDeals(dealStorage.getAll());
 
     toast({
       title: "Stage Updated",

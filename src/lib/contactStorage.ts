@@ -199,5 +199,9 @@ export const contactStorage = {
     }).filter(p => p.name && p.name !== 'Unknown');
 
     return this.importFromLinkedIn(profiles);
-  }
+  },
+
+  clear(): void {
+    localStorage.removeItem(STORAGE_KEY);
+  },
 };

@@ -1,22 +1,13 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Save, Send, Eye, Plus, Mail, Wand2, Loader2 } from 'lucide-react';
+import { Save, Send, Eye, Mail, Wand2, Loader2 } from 'lucide-react';
 import { ionosAI } from '@/lib/ionosAI';
 import { useToast } from '@/hooks/use-toast';
-
-interface EmailTemplate {
-  id: string;
-  name: string;
-  subject: string;
-  body: string;
-  tags: string[];
-  createdAt: string;
-}
+import { templateStorage, EmailTemplate } from '@/lib/templateStorage';
 
 export const EmailComposer = () => {
   const { toast } = useToast();
@@ -31,20 +22,26 @@ export const EmailComposer = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiContext, setAiContext] = useState({ recipientName: '', company: '', goal: '' });
 
+  useEffect(() => {
+    setTemplates(templateStorage.getAll());
+  }, []);
+
   const handleSaveTemplate = () => {
     if (currentTemplate.name && currentTemplate.subject && currentTemplate.body) {
-      const newTemplate: EmailTemplate = {
-        id: Date.now().toString(),
+      templateStorage.create({
         name: currentTemplate.name,
         subject: currentTemplate.subject,
         body: currentTemplate.body,
         tags: currentTemplate.tags || [],
-        createdAt: new Date().toISOString()
-      };
+      });
       
-      setTemplates([...templates, newTemplate]);
+      setTemplates(templateStorage.getAll());
       setCurrentTemplate({ name: '', subject: '', body: '', tags: [] });
-      console.log('Template saved:', newTemplate);
+      
+      toast({
+        title: 'Template Saved',
+        description: 'Your email template has been saved.',
+      });
     }
   };
 
@@ -156,7 +153,7 @@ export const EmailComposer = () => {
                 />
               </div>
               
-              <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+              <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
                 <strong>Available variables:</strong> &#123;&#123;name&#125;&#125;, &#123;&#123;email&#125;&#125;, &#123;&#123;company&#125;&#125;, &#123;&#123;tag1&#125;&#125;, &#123;&#123;tag2&#125;&#125;
               </div>
               
@@ -189,8 +186,8 @@ export const EmailComposer = () => {
             </CardHeader>
             <CardContent>
               {templates.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <div className="text-center text-muted-foreground py-8">
+                  <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p className="text-sm">No templates yet</p>
                   <p className="text-xs">Create your first template</p>
                 </div>
@@ -199,11 +196,11 @@ export const EmailComposer = () => {
                   {templates.map((template) => (
                     <div 
                       key={template.id}
-                      className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                      className="p-3 border rounded-lg hover:bg-muted cursor-pointer"
                       onClick={() => handleLoadTemplate(template)}
                     >
                       <div className="font-medium text-sm">{template.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">{template.subject}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{template.subject}</div>
                       <div className="flex gap-1 mt-2">
                         {template.tags.map((tag) => (
                           <Badge key={tag} variant="secondary" className="text-xs">

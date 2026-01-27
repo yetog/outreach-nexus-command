@@ -128,5 +128,9 @@ export const taskStorage = {
     });
     
     return counts;
-  }
+  },
+
+  clear(): void {
+    localStorage.removeItem(STORAGE_KEY);
+  },
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -6,85 +6,66 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Download, Upload, Edit, Trash2 } from 'lucide-react';
-
-interface KnowledgeEntry {
-  id: string;
-  category: string;
-  data: Record<string, any>;
-}
-
-interface PhoneScript {
-  id: string;
-  type: 'voicemail' | 'call';
-  title: string;
-  content: string;
-}
+import { knowledgeStorage, KnowledgeEntry, PhoneScript } from '@/lib/knowledgeStorage';
+import { useToast } from '@/hooks/use-toast';
 
 export const KnowledgeManager = () => {
-  const [knowledgeEntries, setKnowledgeEntries] = useState<KnowledgeEntry[]>([
-    {
-      id: '1',
-      category: 'Product Features',
-      data: {
-        'Feature Name': 'AI Automation',
-        'Description': 'Automated lead scoring and nurturing',
-        'Benefits': 'Saves 10+ hours weekly',
-        'Price Point': '$299/month'
-      }
-    }
-  ]);
-
-  const [phoneScripts, setPhoneScripts] = useState<PhoneScript[]>([
-    {
-      id: '1',
-      type: 'call',
-      title: 'Cold Outreach Script',
-      content: 'Hi [Name], this is [Your Name] from [Company]. I noticed you\'re working on [specific challenge]. We help companies like yours [specific benefit]. Do you have 30 seconds for me to explain how?'
-    },
-    {
-      id: '2',
-      type: 'voicemail',
-      title: 'Follow-up Voicemail',
-      content: 'Hi [Name], [Your Name] calling from [Company]. I left you a voicemail yesterday about [topic]. I have a quick idea that could [specific benefit]. Call me back at [number] or I\'ll try you again tomorrow.'
-    }
-  ]);
-
+  const { toast } = useToast();
+  const [knowledgeEntries, setKnowledgeEntries] = useState<KnowledgeEntry[]>([]);
+  const [phoneScripts, setPhoneScripts] = useState<PhoneScript[]>([]);
   const [newEntry, setNewEntry] = useState({ category: '', key: '', value: '' });
   const [newScript, setNewScript] = useState({ type: 'call' as 'call' | 'voicemail', title: '', content: '' });
 
+  useEffect(() => {
+    setKnowledgeEntries(knowledgeStorage.getAllKnowledge());
+    setPhoneScripts(knowledgeStorage.getAllScripts());
+  }, []);
+
   const addKnowledgeEntry = () => {
     if (newEntry.category && newEntry.key && newEntry.value) {
-      const entry = knowledgeEntries.find(e => e.category === newEntry.category);
-      if (entry) {
-        entry.data[newEntry.key] = newEntry.value;
-        setKnowledgeEntries([...knowledgeEntries]);
-      } else {
-        setKnowledgeEntries([
-          ...knowledgeEntries,
-          {
-            id: Date.now().toString(),
-            category: newEntry.category,
-            data: { [newEntry.key]: newEntry.value }
-          }
-        ]);
-      }
+      knowledgeStorage.createKnowledge({
+        category: newEntry.category,
+        data: { [newEntry.key]: newEntry.value },
+      });
+      
+      setKnowledgeEntries(knowledgeStorage.getAllKnowledge());
       setNewEntry({ category: '', key: '', value: '' });
+      
+      toast({
+        title: 'Knowledge added',
+        description: 'Entry has been saved.',
+      });
     }
   };
 
   const addPhoneScript = () => {
     if (newScript.title && newScript.content) {
-      setPhoneScripts([
-        ...phoneScripts,
-        {
-          id: Date.now().toString(),
-          type: newScript.type,
-          title: newScript.title,
-          content: newScript.content
-        }
-      ]);
+      knowledgeStorage.createScript({
+        type: newScript.type,
+        title: newScript.title,
+        content: newScript.content,
+      });
+      
+      setPhoneScripts(knowledgeStorage.getAllScripts());
       setNewScript({ type: 'call', title: '', content: '' });
+      
+      toast({
+        title: 'Script added',
+        description: 'Phone script has been saved.',
+      });
     }
+  };
+
+  const deleteKnowledge = (id: string) => {
+    knowledgeStorage.deleteKnowledge(id);
+    setKnowledgeEntries(knowledgeStorage.getAllKnowledge());
+    toast({ title: 'Entry deleted' });
+  };
+
+  const deleteScript = (id: string) => {
+    knowledgeStorage.deleteScript(id);
+    setPhoneScripts(knowledgeStorage.getAllScripts());
+    toast({ title: 'Script deleted' });
   };
 
   return (
@@ -148,35 +129,41 @@ export const KnowledgeManager = () => {
                 </div>
 
                 {/* Knowledge entries display */}
-                {knowledgeEntries.map((entry) => (
-                  <Card key={entry.id} className="border-l-4 border-l-primary">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{entry.category}</CardTitle>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        {Object.entries(entry.data).map(([key, value]) => (
-                          <div key={key} className="space-y-1">
-                            <Badge variant="secondary" className="text-xs">
-                              {key}
-                            </Badge>
-                            <p className="text-sm font-medium">{value}</p>
+                {knowledgeEntries.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No knowledge entries yet. Add your first one above!
+                  </div>
+                ) : (
+                  knowledgeEntries.map((entry) => (
+                    <Card key={entry.id} className="border-l-4 border-l-primary">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">{entry.category}</CardTitle>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => deleteKnowledge(entry.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(entry.data).map(([key, value]) => (
+                            <div key={key} className="space-y-1">
+                              <Badge variant="secondary" className="text-xs">
+                                {key}
+                              </Badge>
+                              <p className="text-sm font-medium">{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -198,7 +185,7 @@ export const KnowledgeManager = () => {
                     <select
                       value={newScript.type}
                       onChange={(e) => setNewScript({ ...newScript, type: e.target.value as 'call' | 'voicemail' })}
-                      className="px-3 py-2 border rounded-md"
+                      className="px-3 py-2 border rounded-md bg-background"
                     >
                       <option value="call">Call Script</option>
                       <option value="voicemail">Voicemail Script</option>
@@ -223,35 +210,41 @@ export const KnowledgeManager = () => {
                 </div>
 
                 {/* Scripts display */}
-                <div className="grid gap-4">
-                  {phoneScripts.map((script) => (
-                    <Card key={script.id}>
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={script.type === 'call' ? 'default' : 'secondary'}>
-                              {script.type === 'call' ? 'Call' : 'Voicemail'}
-                            </Badge>
-                            <CardTitle className="text-lg">{script.title}</CardTitle>
+                {phoneScripts.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No phone scripts yet. Add your first one above!
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {phoneScripts.map((script) => (
+                      <Card key={script.id}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={script.type === 'call' ? 'default' : 'secondary'}>
+                                {script.type === 'call' ? 'Call' : 'Voicemail'}
+                              </Badge>
+                              <CardTitle className="text-lg">{script.title}</CardTitle>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => deleteScript(script.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {script.content}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {script.content}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

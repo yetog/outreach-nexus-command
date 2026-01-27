@@ -5,7 +5,19 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/context/AppSettingsContext';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
+import { Save, RotateCcw, AlertTriangle } from 'lucide-react';
+import { resetDemoData } from '@/lib/demoData';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function Settings() {
   const { backendUrl, setBackendUrl } = useAppSettings();
@@ -18,6 +30,16 @@ export default function Settings() {
       title: 'Settings saved',
       description: 'Backend API URL has been updated.',
     });
+  };
+
+  const handleResetDemo = () => {
+    resetDemoData();
+    toast({
+      title: 'Demo Reset Complete',
+      description: 'All data has been reset to demo defaults.',
+    });
+    // Reload the page to reflect changes
+    window.location.reload();
   };
 
   return (
@@ -81,6 +103,47 @@ export default function Settings() {
             <p className="text-sm text-muted-foreground">
               S3 credentials are managed via backend environment variables for secure file uploads and PDF generation.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Demo Mode
+            </CardTitle>
+            <CardDescription>
+              Reset all data to demo defaults
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will clear all your current data (contacts, deals, tasks, campaigns, etc.) and replace it with sample demo data. 
+              This action cannot be undone.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reset Demo Data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete all your current data and reset the app to demo mode with sample data. 
+                    This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetDemo} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Yes, Reset Everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
       </div>
