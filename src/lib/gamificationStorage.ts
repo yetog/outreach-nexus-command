@@ -358,4 +358,11 @@ export const gamificationStorage = {
     const total = nextThreshold - currentThreshold;
     return Math.min((progress / total) * 100, 100);
   },
+
+  clear(): void {
+    localStorage.removeItem(STORAGE_KEYS.PROFILE);
+    localStorage.removeItem(STORAGE_KEYS.EVENTS);
+    localStorage.removeItem(STORAGE_KEYS.BADGES);
+    localStorage.removeItem(STORAGE_KEYS.QUESTS);
+  },
 };

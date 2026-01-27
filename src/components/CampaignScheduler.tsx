@@ -1,26 +1,15 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Calendar, Clock, Users, Mail } from 'lucide-react';
-
-interface Campaign {
-  id: string;
-  name: string;
-  template: string;
-  status: 'draft' | 'scheduled' | 'running' | 'paused' | 'completed';
-  targetCount: number;
-  sentCount: number;
-  scheduleType: 'immediate' | 'scheduled' | 'drip';
-  scheduledDate?: string;
-  dailyLimit: number;
-  createdAt: string;
-}
+import { campaignStorage, Campaign } from '@/lib/campaignStorage';
+import { useToast } from '@/hooks/use-toast';
 
 export const CampaignScheduler = () => {
+  const { toast } = useToast();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [newCampaign, setNewCampaign] = useState<{
     name: string;
@@ -28,39 +17,65 @@ export const CampaignScheduler = () => {
     scheduleType: 'immediate' | 'scheduled' | 'drip';
     scheduledDate: string;
     dailyLimit: number;
+    targetCount: number;
   }>({
     name: '',
     template: '',
     scheduleType: 'immediate',
     scheduledDate: '',
-    dailyLimit: 50
+    dailyLimit: 50,
+    targetCount: 0
   });
+
+  useEffect(() => {
+    setCampaigns(campaignStorage.getAll());
+  }, []);
 
   const handleCreateCampaign = () => {
     if (newCampaign.name && newCampaign.template) {
-      const campaign: Campaign = {
-        id: Date.now().toString(),
+      campaignStorage.create({
         name: newCampaign.name,
         template: newCampaign.template,
         status: 'draft',
-        targetCount: 0, // This would be calculated based on selected contacts
-        sentCount: 0,
+        targetCount: newCampaign.targetCount || 50,
         scheduleType: newCampaign.scheduleType,
         scheduledDate: newCampaign.scheduledDate,
         dailyLimit: newCampaign.dailyLimit,
-        createdAt: new Date().toISOString()
-      };
+      });
       
-      setCampaigns([...campaigns, campaign]);
+      setCampaigns(campaignStorage.getAll());
       setNewCampaign({
         name: '',
         template: '',
         scheduleType: 'immediate',
         scheduledDate: '',
-        dailyLimit: 50
+        dailyLimit: 50,
+        targetCount: 0
       });
-      console.log('Campaign created:', campaign);
+      
+      toast({
+        title: 'Campaign Created',
+        description: `Campaign "${newCampaign.name}" has been created.`,
+      });
     }
+  };
+
+  const handleStartCampaign = (id: string) => {
+    campaignStorage.send(id);
+    setCampaigns(campaignStorage.getAll());
+    toast({
+      title: 'Campaign Started',
+      description: 'Campaign is now running. +8 XP',
+    });
+  };
+
+  const handlePauseCampaign = (id: string) => {
+    campaignStorage.update(id, { status: 'paused' });
+    setCampaigns(campaignStorage.getAll());
+    toast({
+      title: 'Campaign Paused',
+      description: 'Campaign has been paused.',
+    });
   };
 
   const getStatusColor = (status: Campaign['status']) => {
@@ -161,8 +176,8 @@ export const CampaignScheduler = () => {
         </CardHeader>
         <CardContent>
           {campaigns.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <div className="text-center text-muted-foreground py-8">
+              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="text-lg font-medium">No campaigns yet</p>
               <p className="text-sm">Create your first campaign to start sending emails</p>
             </div>
@@ -173,7 +188,7 @@ export const CampaignScheduler = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="font-medium text-lg">{campaign.name}</h3>
-                      <p className="text-sm text-gray-500">Template: {campaign.template}</p>
+                      <p className="text-sm text-muted-foreground">Template: {campaign.template}</p>
                     </div>
                     <Badge className={getStatusColor(campaign.status)}>
                       {campaign.status}
@@ -182,21 +197,21 @@ export const CampaignScheduler = () => {
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-gray-400" />
+                      <Users className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
                         {campaign.sentCount}/{campaign.targetCount} sent
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
+                      <Mail className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{campaign.dailyLimit}/day limit</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
+                      <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">{campaign.scheduleType}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">
                         {new Date(campaign.createdAt).toLocaleDateString()}
                       </span>
@@ -205,15 +220,21 @@ export const CampaignScheduler = () => {
                   
                   <div className="flex gap-2">
                     {campaign.status === 'draft' && (
-                      <Button size="sm">
+                      <Button size="sm" onClick={() => handleStartCampaign(campaign.id)}>
                         <Play className="h-4 w-4 mr-2" />
                         Start Campaign
                       </Button>
                     )}
                     {campaign.status === 'running' && (
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={() => handlePauseCampaign(campaign.id)}>
                         <Pause className="h-4 w-4 mr-2" />
                         Pause
+                      </Button>
+                    )}
+                    {campaign.status === 'paused' && (
+                      <Button size="sm" onClick={() => handleStartCampaign(campaign.id)}>
+                        <Play className="h-4 w-4 mr-2" />
+                        Resume
                       </Button>
                     )}
                     <Button size="sm" variant="outline">

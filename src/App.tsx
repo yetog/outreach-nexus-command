@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { AppSettingsProvider } from '@/context/AppSettingsContext';
@@ -12,7 +12,11 @@ import { EmailComposer } from '@/components/EmailComposer';
 import { CampaignScheduler } from '@/components/CampaignScheduler';
 import { CallNotes } from '@/components/CallNotes';
 import { StatusTracker } from '@/components/StatusTracker';
+import { seedDemoData } from '@/lib/demoData';
 import './App.css';
+
+// Seed demo data on first load
+seedDemoData();
 
 function App() {
   return (

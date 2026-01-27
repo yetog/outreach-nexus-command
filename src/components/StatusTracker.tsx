@@ -1,59 +1,102 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Eye, MousePointer, UserMinus, TrendingUp, Calendar } from 'lucide-react';
-
-interface EmailLog {
-  id: string;
-  campaignName: string;
-  recipientEmail: string;
-  recipientName: string;
-  status: 'sent' | 'delivered' | 'opened' | 'clicked' | 'bounced' | 'unsubscribed';
-  sentAt: string;
-  openedAt?: string;
-  clickedAt?: string;
-}
+import { Mail, Eye, MousePointer, UserMinus, TrendingUp, Calendar, Phone, CheckCircle } from 'lucide-react';
+import { dealStorage } from '@/lib/dealStorage';
+import { taskStorage } from '@/lib/taskStorage';
+import { contactStorage } from '@/lib/contactStorage';
+import { campaignStorage } from '@/lib/campaignStorage';
+import { gamificationStorage } from '@/lib/gamificationStorage';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export const StatusTracker = () => {
-  const emailLogs: EmailLog[] = [
-    // Sample data - in real app this would come from your backend
-  ];
+  const [stats, setStats] = useState({
+    totalContacts: 0,
+    totalDeals: 0,
+    pipelineValue: 0,
+    tasksCompleted: 0,
+    totalTasks: 0,
+    activeCampaigns: 0,
+    emailsSent: 0,
+  });
 
-  const stats = {
-    totalSent: 0,
-    delivered: 0,
-    opened: 0,
-    clicked: 0,
-    bounced: 0,
-    unsubscribed: 0,
-    openRate: 0,
-    clickRate: 0
-  };
+  const [dealsByStage, setDealsByStage] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [recentActivity, setRecentActivity] = useState<{ date: string; tasks: number; calls: number; emails: number }[]>([]);
 
-  const getStatusColor = (status: EmailLog['status']) => {
-    switch (status) {
-      case 'sent': return 'bg-blue-100 text-blue-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'opened': return 'bg-purple-100 text-purple-800';
-      case 'clicked': return 'bg-orange-100 text-orange-800';
-      case 'bounced': return 'bg-red-100 text-red-800';
-      case 'unsubscribed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+  useEffect(() => {
+    const contacts = contactStorage.getAll();
+    const deals = dealStorage.getAll();
+    const tasks = taskStorage.getAll();
+    const campaigns = campaignStorage.getAll();
+    const profile = gamificationStorage.getProfile();
+
+    // Calculate stats
+    const pipelineValue = deals.reduce((sum, d) => sum + d.value, 0);
+    const activeCampaigns = campaigns.filter(c => c.status === 'running').length;
+    const emailsSent = campaigns.reduce((sum, c) => sum + c.sentCount, 0);
+
+    setStats({
+      totalContacts: contacts.length,
+      totalDeals: deals.length,
+      pipelineValue,
+      tasksCompleted: profile.stats.tasksCompleted,
+      totalTasks: tasks.length,
+      activeCampaigns,
+      emailsSent,
+    });
+
+    // Deals by stage
+    const stageColors: Record<string, string> = {
+      discovery: '#3b82f6',
+      proposal: '#f59e0b',
+      negotiation: '#f97316',
+      closing: '#8b5cf6',
+      won: '#22c55e',
+      lost: '#ef4444',
+    };
+
+    const stageCounts = deals.reduce((acc, deal) => {
+      acc[deal.stage] = (acc[deal.stage] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    setDealsByStage(
+      Object.entries(stageCounts).map(([stage, count]) => ({
+        name: stage.charAt(0).toUpperCase() + stage.slice(1),
+        value: count,
+        color: stageColors[stage] || '#6b7280',
+      }))
+    );
+
+    // Generate demo activity data for the past 7 days
+    const activityData = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+      activityData.push({
+        date: dayName,
+        tasks: Math.floor(Math.random() * 8) + 2,
+        calls: Math.floor(Math.random() * 5) + 1,
+        emails: Math.floor(Math.random() * 10) + 3,
+      });
     }
-  };
+    setRecentActivity(activityData);
+  }, []);
 
   return (
     <div className="space-y-6">
-      {/* Analytics Cards */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Mail className="h-8 w-8 text-blue-500" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Mail className="h-6 w-6 text-blue-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{stats.totalSent}</p>
-                <p className="text-sm text-gray-600">Total Sent</p>
+                <p className="text-2xl font-bold">{stats.emailsSent}</p>
+                <p className="text-sm text-muted-foreground">Emails Sent</p>
               </div>
             </div>
           </CardContent>
@@ -62,10 +105,12 @@ export const StatusTracker = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <Eye className="h-8 w-8 text-purple-500" />
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{stats.openRate}%</p>
-                <p className="text-sm text-gray-600">Open Rate</p>
+                <p className="text-2xl font-bold">{stats.tasksCompleted}</p>
+                <p className="text-sm text-muted-foreground">Tasks Done</p>
               </div>
             </div>
           </CardContent>
@@ -74,10 +119,12 @@ export const StatusTracker = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <MousePointer className="h-8 w-8 text-orange-500" />
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-purple-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{stats.clickRate}%</p>
-                <p className="text-sm text-gray-600">Click Rate</p>
+                <p className="text-2xl font-bold">${(stats.pipelineValue / 1000).toFixed(0)}k</p>
+                <p className="text-sm text-muted-foreground">Pipeline Value</p>
               </div>
             </div>
           </CardContent>
@@ -86,85 +133,114 @@ export const StatusTracker = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <UserMinus className="h-8 w-8 text-red-500" />
+              <div className="p-2 bg-orange-100 rounded-lg">
+                <Calendar className="h-6 w-6 text-orange-600" />
+              </div>
               <div>
-                <p className="text-2xl font-bold">{stats.bounced}</p>
-                <p className="text-sm text-gray-600">Bounced</p>
+                <p className="text-2xl font-bold">{stats.activeCampaigns}</p>
+                <p className="text-sm text-muted-foreground">Active Campaigns</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Email Activity Log */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Email Activity Log</CardTitle>
-          <CardDescription>
-            Track email delivery, opens, clicks, and other engagement metrics
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {emailLogs.length === 0 ? (
-            <div className="text-center text-gray-500 py-12">
-              <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">No email activity yet</p>
-              <p className="text-sm">Email logs and analytics will appear here once you start sending campaigns</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Activity Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Weekly Activity</CardTitle>
+            <CardDescription>Tasks, calls, and emails over the past week</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={recentActivity}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }} 
+                  />
+                  <Bar dataKey="tasks" fill="hsl(var(--primary))" name="Tasks" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="calls" fill="#22c55e" name="Calls" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="emails" fill="#f59e0b" name="Emails" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-6 gap-4 p-4 bg-gray-50 font-medium text-sm border-b rounded-t-lg">
-                <div>Recipient</div>
-                <div>Campaign</div>
-                <div>Status</div>
-                <div>Sent At</div>
-                <div>Opened At</div>
-                <div>Actions</div>
-              </div>
-              
-              {emailLogs.map((log) => (
-                <div key={log.id} className="grid grid-cols-6 gap-4 p-4 border-b hover:bg-gray-50">
-                  <div>
-                    <div className="font-medium">{log.recipientName}</div>
-                    <div className="text-sm text-gray-500">{log.recipientEmail}</div>
-                  </div>
-                  <div className="text-sm">{log.campaignName}</div>
-                  <div>
-                    <Badge className={getStatusColor(log.status)}>
-                      {log.status}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {new Date(log.sentAt).toLocaleString()}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {log.openedAt ? new Date(log.openedAt).toLocaleString() : '-'}
-                  </div>
-                  <div>
-                    <button className="text-blue-600 hover:text-blue-800 text-sm">
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* Campaign Performance Summary */}
+        {/* Deal Pipeline */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Deal Pipeline</CardTitle>
+            <CardDescription>Deals by stage ({stats.totalDeals} total)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {dealsByStage.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No deals yet</p>
+                  <p className="text-sm">Create deals to see pipeline stats</p>
+                </div>
+              </div>
+            ) : (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={dealsByStage}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                    >
+                      {dealsByStage.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Summary Stats */}
       <Card>
         <CardHeader>
-          <CardTitle>Campaign Performance</CardTitle>
-          <CardDescription>
-            Overview of your campaign metrics and engagement rates
-          </CardDescription>
+          <CardTitle>Overview</CardTitle>
+          <CardDescription>Your CRM at a glance</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-gray-500 py-8">
-            <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium">Performance charts coming soon</p>
-            <p className="text-sm">Detailed analytics and charts will be displayed here</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <p className="text-3xl font-bold text-primary">{stats.totalContacts}</p>
+              <p className="text-sm text-muted-foreground">Total Contacts</p>
+            </div>
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <p className="text-3xl font-bold text-primary">{stats.totalDeals}</p>
+              <p className="text-sm text-muted-foreground">Total Deals</p>
+            </div>
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <p className="text-3xl font-bold text-primary">{stats.totalTasks}</p>
+              <p className="text-sm text-muted-foreground">Total Tasks</p>
+            </div>
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <p className="text-3xl font-bold text-primary">{stats.activeCampaigns}</p>
+              <p className="text-sm text-muted-foreground">Campaigns Running</p>
+            </div>
           </div>
         </CardContent>
       </Card>
