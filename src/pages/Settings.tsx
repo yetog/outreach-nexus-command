@@ -5,8 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/context/AppSettingsContext';
 import { useToast } from '@/hooks/use-toast';
-import { Save, RotateCcw, AlertTriangle } from 'lucide-react';
-import { resetDemoData } from '@/lib/demoData';
+import { Save, RotateCcw, AlertTriangle, Trash2 } from 'lucide-react';
+import { resetDemoData, clearAllData } from '@/lib/demoData';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +37,16 @@ export default function Settings() {
     toast({
       title: 'Demo Reset Complete',
       description: 'All data has been reset to demo defaults.',
+    });
+    // Reload the page to reflect changes
+    window.location.reload();
+  };
+
+  const handleClearAll = () => {
+    clearAllData();
+    toast({
+      title: 'Data Cleared',
+      description: 'All data has been removed. Start fresh!',
     });
     // Reload the page to reflect changes
     window.location.reload();
@@ -106,40 +116,91 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card className="border-destructive/50">
+        <Card className="border-warning/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <RotateCcw className="h-5 w-5 text-warning" />
               Demo Mode
             </CardTitle>
             <CardDescription>
-              Reset all data to demo defaults
+              Reset to demo data for showcasing features
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This will clear all your current data (contacts, deals, tasks, campaigns, etc.) and replace it with sample demo data. 
-              This action cannot be undone.
+              This will clear all your current data and replace it with sample demo data (contacts, deals, tasks, templates). 
+              Useful for demos or exploring features.
             </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">
+                <Button variant="outline">
                   <RotateCcw className="h-4 w-4 mr-2" />
-                  Reset Demo Data
+                  Load Demo Data
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Load Demo Data?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will delete all your current data and reset the app to demo mode with sample data. 
-                    This action cannot be undone.
+                    This will replace all your current data with sample demo data. 
+                    Your existing contacts, deals, and other data will be lost.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleResetDemo} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Yes, Reset Everything
+                  <AlertDialogAction onClick={handleResetDemo}>
+                    Yes, Load Demo Data
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Clear All Data
+            </CardTitle>
+            <CardDescription>
+              Start fresh with an empty CRM
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This will permanently delete all your data including contacts, deals, tasks, campaigns, and gamification progress. 
+              You'll start with a completely empty CRM. This action cannot be undone.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All Data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete ALL your data:
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>All contacts and their history</li>
+                      <li>All deals and pipeline data</li>
+                      <li>All tasks and schedules</li>
+                      <li>All campaigns and templates</li>
+                      <li>All gamification progress (XP, badges, quests)</li>
+                    </ul>
+                    <p className="mt-2 font-medium">This cannot be undone.</p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={handleClearAll} 
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Yes, Delete Everything
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
