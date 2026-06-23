@@ -143,11 +143,11 @@ export function installAutoSync() {
 
   localStorage.setItem = (key: string, value: string) => {
     origSet(key, value);
-    if (SYNCED_KEYS.includes(key as any)) cloudSync.pushKey(key);
+    if (!syncSuspended && SYNCED_KEYS.includes(key as any)) cloudSync.pushKey(key);
   };
 
   localStorage.removeItem = (key: string) => {
     origRemove(key);
-    if (SYNCED_KEYS.includes(key as any)) cloudSync.pushKey(key);
+    if (!syncSuspended && SYNCED_KEYS.includes(key as any)) cloudSync.pushKey(key);
   };
 }
