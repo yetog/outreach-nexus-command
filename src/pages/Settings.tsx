@@ -85,6 +85,50 @@ export default function Settings() {
       <div className="grid gap-6 max-w-2xl">
         <Card>
           <CardHeader>
+            <CardTitle>Account</CardTitle>
+            <CardDescription>You are signed in to Outreach Nexus.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Email: </span>
+              <span className="font-medium">{user?.email}</span>
+            </div>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cloud className="h-5 w-5" />
+              Cloud Sync
+            </CardTitle>
+            <CardDescription>
+              Your data lives in the cloud and is mirrored locally for speed. Every change syncs automatically.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleForceSync} disabled={syncing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                Push local → cloud
+              </Button>
+              <Button variant="outline" onClick={handlePullSync} disabled={syncing}>
+                <Cloud className="h-4 w-4 mr-2" />
+                Pull cloud → local
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Use these if you switched devices and want to force a sync, or if something looks out of date.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Backend Configuration</CardTitle>
             <CardDescription>
               Configure the backend API endpoint for your Outreach Nexus instance
