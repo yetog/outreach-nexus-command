@@ -5,8 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/context/AppSettingsContext';
 import { useToast } from '@/hooks/use-toast';
-import { Save, RotateCcw, AlertTriangle, Trash2 } from 'lucide-react';
+import { Save, RotateCcw, AlertTriangle, Trash2, LogOut, Cloud, RefreshCw } from 'lucide-react';
 import { resetDemoData, clearAllData } from '@/lib/demoData';
+import { useAuth } from '@/context/AuthContext';
+import { cloudSync } from '@/lib/cloudSync';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,33 +26,53 @@ export default function Settings() {
   const { backendUrl, setBackendUrl } = useAppSettings();
   const [url, setUrl] = useState(backendUrl);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [syncing, setSyncing] = useState(false);
 
   const handleSave = () => {
     setBackendUrl(url.trim());
-    toast({
-      title: 'Settings saved',
-      description: 'Backend API URL has been updated.',
-    });
+    toast({ title: 'Settings saved', description: 'Backend API URL has been updated.' });
   };
 
-  const handleResetDemo = () => {
+  const handleResetDemo = async () => {
     resetDemoData();
-    toast({
-      title: 'Demo Reset Complete',
-      description: 'All data has been reset to demo defaults.',
-    });
-    // Reload the page to reflect changes
+    await cloudSync.pushAll();
+    toast({ title: 'Demo Reset Complete', description: 'All data has been reset to demo defaults.' });
     window.location.reload();
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     clearAllData();
-    toast({
-      title: 'Data Cleared',
-      description: 'All data has been removed. Start fresh!',
-    });
-    // Reload the page to reflect changes
+    await cloudSync.clearCloud();
+    toast({ title: 'Data Cleared', description: 'All data has been removed. Start fresh!' });
     window.location.reload();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth', { replace: true });
+  };
+
+  const handleForceSync = async () => {
+    setSyncing(true);
+    try {
+      await cloudSync.pushAll();
+      toast({ title: 'Synced', description: 'All local data pushed to the cloud.' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handlePullSync = async () => {
+    setSyncing(true);
+    try {
+      await cloudSync.pullAll();
+      toast({ title: 'Pulled', description: 'Latest cloud data loaded.' });
+      window.location.reload();
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
@@ -60,6 +83,50 @@ export default function Settings() {
       </div>
 
       <div className="grid gap-6 max-w-2xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Account</CardTitle>
+            <CardDescription>You are signed in to Outreach Nexus.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-sm">
+              <span className="text-muted-foreground">Email: </span>
+              <span className="font-medium">{user?.email}</span>
+            </div>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cloud className="h-5 w-5" />
+              Cloud Sync
+            </CardTitle>
+            <CardDescription>
+              Your data lives in the cloud and is mirrored locally for speed. Every change syncs automatically.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={handleForceSync} disabled={syncing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                Push local → cloud
+              </Button>
+              <Button variant="outline" onClick={handlePullSync} disabled={syncing}>
+                <Cloud className="h-4 w-4 mr-2" />
+                Pull cloud → local
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Use these if you switched devices and want to force a sync, or if something looks out of date.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Backend Configuration</CardTitle>
