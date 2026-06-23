@@ -5,8 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAppSettings } from '@/context/AppSettingsContext';
 import { useToast } from '@/hooks/use-toast';
-import { Save, RotateCcw, AlertTriangle, Trash2 } from 'lucide-react';
+import { Save, RotateCcw, AlertTriangle, Trash2, LogOut, Cloud, RefreshCw } from 'lucide-react';
 import { resetDemoData, clearAllData } from '@/lib/demoData';
+import { useAuth } from '@/context/AuthContext';
+import { cloudSync } from '@/lib/cloudSync';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,33 +26,53 @@ export default function Settings() {
   const { backendUrl, setBackendUrl } = useAppSettings();
   const [url, setUrl] = useState(backendUrl);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [syncing, setSyncing] = useState(false);
 
   const handleSave = () => {
     setBackendUrl(url.trim());
-    toast({
-      title: 'Settings saved',
-      description: 'Backend API URL has been updated.',
-    });
+    toast({ title: 'Settings saved', description: 'Backend API URL has been updated.' });
   };
 
-  const handleResetDemo = () => {
+  const handleResetDemo = async () => {
     resetDemoData();
-    toast({
-      title: 'Demo Reset Complete',
-      description: 'All data has been reset to demo defaults.',
-    });
-    // Reload the page to reflect changes
+    await cloudSync.pushAll();
+    toast({ title: 'Demo Reset Complete', description: 'All data has been reset to demo defaults.' });
     window.location.reload();
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     clearAllData();
-    toast({
-      title: 'Data Cleared',
-      description: 'All data has been removed. Start fresh!',
-    });
-    // Reload the page to reflect changes
+    await cloudSync.clearCloud();
+    toast({ title: 'Data Cleared', description: 'All data has been removed. Start fresh!' });
     window.location.reload();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth', { replace: true });
+  };
+
+  const handleForceSync = async () => {
+    setSyncing(true);
+    try {
+      await cloudSync.pushAll();
+      toast({ title: 'Synced', description: 'All local data pushed to the cloud.' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handlePullSync = async () => {
+    setSyncing(true);
+    try {
+      await cloudSync.pullAll();
+      toast({ title: 'Pulled', description: 'Latest cloud data loaded.' });
+      window.location.reload();
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
