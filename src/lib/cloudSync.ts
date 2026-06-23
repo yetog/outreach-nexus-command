@@ -23,10 +23,20 @@ export const SYNCED_KEYS = [
 ] as const;
 
 const pendingPushes = new Map<string, ReturnType<typeof setTimeout>>();
+let syncSuspended = false;
 
 async function currentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.user?.id ?? null;
+}
+
+export function suspendCloudSync(fn: () => void | Promise<void>) {
+  syncSuspended = true;
+  try {
+    return fn();
+  } finally {
+    syncSuspended = false;
+  }
 }
 
 export const cloudSync = {
