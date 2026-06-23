@@ -55,12 +55,17 @@ export const cloudSync = {
       return;
     }
 
-    for (const row of data ?? []) {
-      try {
-        localStorage.setItem(row.key, JSON.stringify(row.data));
-      } catch (e) {
-        console.warn('[cloudSync] write to localStorage failed', row.key, e);
+    syncSuspended = true;
+    try {
+      for (const row of data ?? []) {
+        try {
+          localStorage.setItem(row.key, JSON.stringify(row.data));
+        } catch (e) {
+          console.warn('[cloudSync] write to localStorage failed', row.key, e);
+        }
       }
+    } finally {
+      syncSuspended = false;
     }
   },
 
